@@ -1,0 +1,123 @@
+Développer une application tierce Django
+========================================
+
+Pytong, Toulon 22 Juin 2013 - Lightning Talk  
+Samuel Goldszmidt ([@ouhouhsami](https://twitter.com/ouhouhsami)), Ircam
+
+---
+
+Le besoin
+---------
+
+> Avant de *développer* : *concevoir*, et encore avant : *exprimer le besoin*     
+> " *Intuitif* " n'est pas un besoin accepté par les maisons sérieuses 
+
+Un **champ d'autocomplétion** autorisant un ou plusieurs choix :
+
+* Performant pour des grands nombres de données
+* Accessible (mobiles, postes fixes) * Branché sur l'écosystème Django (notre environnement technique de départ) :
+    * Utilisant Django (si besoin les [paquets de contrib](https://docs.djangoproject.com/en/dev/ref/contrib/), intégrable dans l'admin) et des applications tierces solides/reconnues
+    * Respect des bonnes pratiques (Django et Python, organisation du code, doc, tests)
+
+
+---
+
+L'existant 
+---------- 
+
+Les *alternatives* déjà existantes :
+ 
+* [django-autocomplete-light](http://django-autocomplete-light.readthedocs.org/en/latest/) (anciennement [django-autocomplete](http://code.google.com/p/django-autocomplete/))
+* [django-select2](http://django-select2.readthedocs.org/en/latest/)
+* [django-ajax-selects](https://github.com/crucialfelix/django-ajax-selects/)
+* [quelques autres ici](https://www.djangopackages.com/grids/g/auto-complete/)
+
+> " Pour des choix éclairés, je consulte [djangopackages](https://www.djangopackages.com) "
+
+En terme d'*ergonomie fonctionnelle* :  
+
+* la librairie Javascript [Select2](http://ivaynberg.github.io/select2/) convenait
+* son intégration à Django existait déjà : [django-select2](http://django-select2.readthedocs.org/en/latest/)  
+
+... mais son usage s'est relevé difficile. 
+
+
+---
+
+Les "erreurs"
+-------------
+
+Quelques retours d'expériences sur le code source
+
+* django-select2 : 
+    * très monolithique (notamment la gestion de la configuration Javascript, repassant par Python)
+    * [beaucoup de classes](http://django-select2.readthedocs.org/en/latest/ref_widgets.html)
+    * configuration/paramétrage des "fournisseurs de contenu" complexe
+* Select2 : 
+    * non testé  
+    * API pas très stabilisée
+
+> " Untested code is broken code "  
+
+---
+
+Les besoins de l'implémentation
+-------------------------------
+
+Pour réaliser une fonctionnalité d'autocomplétion, il faut : 
+
+* Côté Javascript : 
+    1. Faire une requête AJAX avec 1 à n paramètres
+    2. Récupèrer un json simple ```[(id, label), ...]``` de données qui permettraient de de remplir les ```<option>```d'un champs ```<select>```)
+    3. Afficher le résultat
+* Côté Django : 
+    1. Attraper une requête AJAX avec 1 à n paramètres
+    2. Répondre, via json.dumps avec a minima : ```[(id, label), ...]``` ou possiblement ```[(id, label, *args, **kwargs), ...]``` pour ajouter url, contenttype
+
+Le reste est en dehors du périmètre initial.
+
+> "Autocompletion for humans"  
+> Tu t'es vu quand t'as embauché une rockstar, un ninja et un guru alors qu'un dev t'aurait suffit - cf. [SEO Rockstar](http://www.youtube.com/watch?v=oNgkwkIQZH8))
+
+---
+
+Le développement
+----------------
+
+* Copier l'organisation du code de Django, particulièrement [le module forms](https://github.com/django/django/tree/master/django/forms)
+* Les conventions d'écriture [PEP8](http://www.python.org/dev/peps/pep-0008/)
+* Les tests (et l'intégration continue), par exemple [Travis CI](https://travis-ci.org/),  [drone.io](https://drone.io/)
+* Une doc (a minima un README)
+* [Le packaging d'application Django](https://docs.djangoproject.com/en/dev/intro/reusable-apps/)
+(et [pour les téméraires, les différences entre distribute, distutils, setuptools, distutils2](http://stackoverflow.com/questions/6344076/differences-between-distribute-distutils-setuptools-and-distutils2))
+
+> " Etre fainéant, ce n'est pas si simple "  
+
+Pour cette version de *validation du principe* : 
+
+* Reparti de la base de tests de django-select2
+* Tout cassé, réordonné sur le modèle du code source de Django
+* Pour aller droit au but (et avoir moins à tester), basé sur 2 applications tierces :
+    1. [django-floppyforms](http://django-floppyforms.readthedocs.org/en/latest/) - *Full control of form rendering in the templates*  
+    Permet de traiter le code Javascript dans un [template : ajax_select2.html](https://github.com/ouhouhsami/django-select2light/blob/master/select2light/templates/select2light/ajax_select2.html)
+    2. [django-tastypie](http://django-tastypie.readthedocs.org/en/latest/) - *Creating delicious APIs for Django apps since 2010*  
+    Permet d'interroger les modèles via Ajax et de récupérer un json via [un fichier api.py](https://github.com/ouhouhsami/django-select2light/blob/master/testapp/testapp/testmain/api.py)
+
+---
+
+La conclusion et la suite
+-------------------------
+
+Pour une version "définitive", les seules briques nécessaires :
+
+* côté HTML : champs input hidden (avec pk) 
+* côté Javascript : l'appel Ajax à l'url qui retourne le(s) données
+* côté Django : une url accessible via url value name
+
+En vrac, des idées pour la suite :  
+
+* HTML5 ```<datalist>``` (se passer de select2)
+* côté widget HTML, prendre appui sur admin raw_id ([ForeignKeyRawIdWidget](https://github.com/django/django/blob/master/django/contrib/admin/widgets.py#L130) & [ManyToManyRawIdWidget](https://github.com/django/django/blob/master/django/contrib/admin/widgets.py#L188))
+* git submodules si des dépendances js ?
+
+> "Le bazooka n'est pas celui qu'on croit"
